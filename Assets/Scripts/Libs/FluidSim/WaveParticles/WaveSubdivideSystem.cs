@@ -8,7 +8,7 @@ namespace OneBitLab.FluidSim
     // Once time for next subdivision run out we create two new neighboring particles and update current one
     // We also calculate time of next subdivision based on the new dispersion angle
     // The higher the dispersion angle the faster particles move away from each other
-    
+
     [UpdateAfter( typeof(WaveSpawnSystem) )]
     public class WaveSubdivideSystem : SystemBase
     {
@@ -33,7 +33,7 @@ namespace OneBitLab.FluidSim
             float       dTime        = Time.DeltaTime;
             const float cWPRadius    = WaveSpawnSystem.c_WaveParticleRadius;
             const float cWPSpeed     = WaveSpawnSystem.c_WaveParticleSpeed;
-            const float cWPMinHeight = WaveSpawnSystem.c_WaveParticleMinHeight;
+            float       cWPMinHeight = WaveSpawnSystem.s_WaveParticleMinHeight;
 
             Entities
                 .ForEach( ( Entity           entity,

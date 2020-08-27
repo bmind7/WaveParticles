@@ -7,15 +7,17 @@ using Random = Unity.Mathematics.Random;
 
 namespace OneBitLab.FluidSim
 {
+    [AlwaysUpdateSystem]
     public class WaveSpawnSystem : SystemBase
     {
         //-------------------------------------------------------------
-        public const float c_WaveParticleRadius    = 0.15f;
-        public const float c_WaveParticleHeight    = 0.05f;
-        public const float c_WaveParticleMinHeight = c_WaveParticleHeight / 27.0f;
-        public const float c_WaveParticleSpeed     = 0.5f;
+        public const float c_WaveParticleRadius = 0.15f;
+        public const float c_WaveParticleHeight = 0.05f;
+        public const float c_WaveParticleSpeed  = 0.5f;
 
         private const int c_StartEntitiesCount = 0;
+
+        public static float s_WaveParticleMinHeight = c_WaveParticleHeight;
 
         public float DropsPerSecond
         {
@@ -23,8 +25,8 @@ namespace OneBitLab.FluidSim
             {
                 // TODO: change for math.EPSILON
                 // avoid division by 0
-                m_DropsInterval = 1.0f / math.max(value, 0.0000001f );
-                m_TimeToDrop = m_DropsInterval;
+                m_DropsInterval = 1.0f / math.max( value, 0.0000001f );
+                m_TimeToDrop    = m_DropsInterval;
             }
         }
 
@@ -36,6 +38,7 @@ namespace OneBitLab.FluidSim
         private float                                  m_DropsInterval;
         private float                                  m_TimeToDrop = 1000000.0f;
         private Random                                 m_Rnd        = new Random( seed: 1234 );
+        private EntityQuery                            m_AllEntitiesQuery;
 
         //-------------------------------------------------------------
         public void AddExternalDependency( JobHandle newDependency )
@@ -75,13 +78,28 @@ namespace OneBitLab.FluidSim
             }
 
             entities.Dispose();
+
+            m_AllEntitiesQuery = GetEntityQuery( ComponentType.ReadOnly<WaveHeight>() );
+        }
+
+        //-------------------------------------------------------------
+        private void UpdateMinParticleHeight()
+        {
+            int particleCount = m_AllEntitiesQuery.CalculateEntityCountWithoutFiltering();
+
+            // When number of particles is small we can let them live longer
+            int subDivNumber = particleCount < 50_000 ? 4 : 3;
+
+            s_WaveParticleMinHeight = c_WaveParticleHeight / math.pow( 3, subDivNumber );
         }
 
         //-------------------------------------------------------------
         protected override void OnUpdate()
         {
+            UpdateMinParticleHeight();
+
             m_ExternalDependency.Complete();
-            
+
             var messageQueue = MessageService.Instance.GetOrCreateMessageQueue<ParticleSpawnMessage>();
 
             // Check if need to add drops to the spawning queue
