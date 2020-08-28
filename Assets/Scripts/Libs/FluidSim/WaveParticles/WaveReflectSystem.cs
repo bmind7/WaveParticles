@@ -40,6 +40,7 @@ namespace OneBitLab.FluidSim
 
             const float cWPRadius = WaveSpawnSystem.c_WaveParticleRadius;
             const float cWPSpeed  = WaveSpawnSystem.c_WaveParticleSpeed;
+            const float cRayDist  = c_RayDistance;
 
             Dependency = Entities
                          .WithReadOnly( physicsWorld )
@@ -67,7 +68,7 @@ namespace OneBitLab.FluidSim
                                  var rcInput = new RaycastInput
                                  {
                                      Start = start,
-                                     End   = start + 100.0f * dir,
+                                     End   = start + cRayDist * dir,
                                      Filter = new CollisionFilter
                                      {
                                          BelongsTo    = ~0u,
@@ -80,12 +81,11 @@ namespace OneBitLab.FluidSim
                                  {
                                      // No collision, so set TimeToReflect equivalent to traveling max ray distance
                                      // Debug.Log( "No Collision found"  );
-                                     ttr.Value = c_RayDistance / cWPSpeed;
+                                     ttr.Value = cRayDist / cWPSpeed;
                                      return;
                                  }
 
-                                 // if( math.distance( hit.Position.xz, wPos.Value ) > math.distance( wOrigin.Value, wPos.Value ) )
-                                 if( math.distance( hit.Position.xz, wPos.Value ) > dTime * cWPSpeed + 0.00000001f )
+                                 if( math.distance( hit.Position.xz, wPos.Value ) > 2.0 * dTime * cWPSpeed )
                                  {
                                      // We are not close to hit point, that means we are procession fresh reflection 
                                      // or newly spawned particle, so just update TimeToReflect and that's it
@@ -99,9 +99,10 @@ namespace OneBitLab.FluidSim
 
                                  // Other value can be correctly calculated right now
                                  // rollback particle a bit to not overshoot the bounds
-                                 wOrigin.Value = wPos.Value - wDir.Value * cWPSpeed * dTime;
+                                 // wOrigin.Value = wPos.Value - cWPSpeed * dTime * wDir.Value;
+                                 wOrigin.Value = hit.Position.xz - cWPSpeed * dTime * wDir.Value;
                                  wDir.Value    = math.reflect( wDir.Value, hit.SurfaceNormal.xz );
-                                 
+
                                  // Calculate new dispersion angle
                                  // Considering that waveOrigin is moved we need to recalculate new angle
                                  // to avoid particle discretization. New dispersion angle is equal to 
