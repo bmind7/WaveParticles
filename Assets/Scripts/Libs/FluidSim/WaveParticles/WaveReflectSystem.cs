@@ -49,8 +49,8 @@ namespace OneBitLab.FluidSim
                                ref WaveOrigin    wOrigin,
                                ref WaveDir       wDir,
                                ref DispersAngle  dispAngle,
-                               in  WavePos       wPos,
-                               in  TimeToSubdiv  tts ) =>
+                               ref TimeToSubdiv  tts,
+                               in  WavePos       wPos ) =>
                              {
                                  ttr.Value -= dTime;
 
@@ -94,21 +94,25 @@ namespace OneBitLab.FluidSim
                                  }
 
                                  // Particle has reached the reflection point
+                                 // Central normal vector
+                                 float2 cNorm = math.normalizesafe( hit.SurfaceNormal.xz );
+
                                  // Set TimeToReflect to 0 to update it properly next frame
                                  ttr.Value = 0;
 
                                  // Other value can be correctly calculated right now
                                  // rollback particle a bit to not overshoot the bounds
-                                 // wOrigin.Value = wPos.Value - cWPSpeed * dTime * wDir.Value;
                                  wOrigin.Value = hit.Position.xz - cWPSpeed * dTime * wDir.Value;
-                                 wDir.Value    = math.reflect( wDir.Value, hit.SurfaceNormal.xz );
+                                 wDir.Value    = math.reflect( wDir.Value, cNorm );
 
                                  // Calculate new dispersion angle
-                                 // Considering that waveOrigin is moved we need to recalculate new angle
-                                 // to avoid particle discretization. New dispersion angle is equal to 
-                                 // the angle between traveled distance and 1/3 of particle radius 
-                                 // at the point of subdivision
-                                 dispAngle.Value = 2 * math.atan2( cWPRadius / 3.0f, tts.Value * cWPSpeed );
+                                 // It's a hacky solution, because to calculate it properly we need to find out
+                                 // if surface concave or convex, to do this we need to make two more raycast
+                                 // and series of calculations. The quick approximation is to make angle quite big,
+                                 // around 60 degrees upon reflection and reset TimeToSubdivide. This will dampen the 
+                                 // wave particle and reduce drastically life time after reflection
+                                 dispAngle.Value = 1.05f; // ~60 degrees
+                                 tts.Value       = 0;
                              } )
                          .ScheduleParallel(
                              JobHandle.CombineDependencies( Dependency, m_ExportPhysicsWorld.GetOutputDependency() )
